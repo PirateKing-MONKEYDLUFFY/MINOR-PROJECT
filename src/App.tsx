@@ -14,6 +14,7 @@ import Medicines from "./pages/Medicines";
 import CaregiverPortal from "./pages/CaregiverPortal";
 import NotFound from "./pages/NotFound";
 import { EmergencyListener } from "@/components/voice/EmergencyListener";
+import { MedicineReminder } from "@/components/medicines/MedicineReminder";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <EmergencyListener />
+          <MedicineReminder />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />

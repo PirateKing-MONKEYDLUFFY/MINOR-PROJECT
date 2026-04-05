@@ -9,15 +9,10 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
-import { saveConsultation } from "@/pages/History";
+import { saveConsultation, getConsultationBySpecialist, Message } from "@/pages/History";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-}
+// Local interface has been moved to History.tsx for reuse
 
 interface LocationState {
   initialMessage?: string;
@@ -53,7 +48,6 @@ export default function Consultation() {
     isSupported: speechSupported 
   } = useSpeechRecognition({
     continuous: true,
-    autoStopTimeout: 10000,
     onResult: (result) => {
       // Direct send when voice completes to avoid state closure issues
       if (result.trim()) {
@@ -73,6 +67,22 @@ export default function Consultation() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Load history on mount
+  useEffect(() => {
+    if (specialistId) {
+      const history = getConsultationBySpecialist(specialistId);
+      if (history && history.fullMessages && history.fullMessages.length > 0) {
+        // Convert string timestamps back to Date objects
+        const loadedMessages = history.fullMessages.map(m => ({
+          ...m,
+          timestamp: new Date(m.timestamp)
+        })) as Message[];
+        setMessages(loadedMessages);
+        hasGreetedRef.current = true; // Skip greeting if history exists
+      }
+    }
+  }, [specialistId]);
 
   // Initial greeting with TTS
   useEffect(() => {
@@ -94,6 +104,7 @@ export default function Consultation() {
         hasGreetedRef.current = true;
 
         if (isTTSEnabled) {
+          stopSpeaking();
           speak(greeting);
         }
       };
@@ -110,21 +121,22 @@ export default function Consultation() {
 
   // Save consultation to history when leaving
   useEffect(() => {
-    return () => {
-      if (specialist && messages.length > 1) {
+      if (specialist && messages.length > 0) {
         const userMessages = messages.filter(m => m.role === "user");
-        if (userMessages.length > 0) {
-          saveConsultation({
-            specialistId: specialist.id,
-            specialistName: specialist.name,
-            specialistTitle: specialist.title,
-            emoji: specialist.emoji,
-            summary: userMessages[0].content.slice(0, 100) + (userMessages[0].content.length > 100 ? "..." : ""),
-            messages: messages.length,
-          });
-        }
+        const summaryText = userMessages.length > 0 
+          ? userMessages[0].content 
+          : messages[0].content;
+          
+        saveConsultation({
+          specialistId: specialist.id,
+          specialistName: specialist.name,
+          specialistTitle: specialist.title,
+          emoji: specialist.emoji,
+          summary: summaryText.slice(0, 100) + (summaryText.length > 100 ? "..." : ""),
+          messages: messages.length,
+          fullMessages: messages,
+        });
       }
-    };
   }, [specialist, messages]);
 
   const handleSendMessage = useCallback(async (textOverride?: string) => {
@@ -329,10 +341,10 @@ export default function Consultation() {
                       : "text-muted-foreground"
                   )}
                 >
-                  {message.timestamp.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                    {new Date(message.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                 </p>
               </div>
             </motion.div>

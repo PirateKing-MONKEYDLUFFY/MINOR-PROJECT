@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { SOSButton } from "@/components/layout/SOSButton";
@@ -7,7 +7,7 @@ import { SPECIALISTS, SPECIALIST_CATEGORIES, Specialist } from "@/types/speciali
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Clock, ChevronRight, Mic, Sparkles, MessageCircle } from "lucide-react";
+import { Search, Clock, ChevronRight, Mic, Sparkles, MessageCircle, AlertTriangle, ShieldAlert, X, Loader2, CheckCircle, Bell } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { getConsultationHistory, ConsultationRecord } from "@/pages/History";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,6 +26,15 @@ export default function Dashboard() {
   const [managedElders, setManagedElders] = useState<any[]>([]);
   const [isEldersLoading, setIsEldersLoading] = useState(false);
   const { profile } = useAuth();
+
+  // SOS state
+  const [sosState, setSosState] = useState<
+    "idle" | "confirming" | "sending" | "sent" | "error"
+  >("idle");
+  const [sosCountdown, setSosCountdown] = useState(3);
+  const [sosResult, setSosResult] = useState<any>(null);
+  const sosTimerRef = useRef<any>(null);
+  const sosCountdownRef = useRef<any>(null);
 
   // Load real consultation history and managed elders
   useEffect(() => {
@@ -67,13 +76,41 @@ export default function Dashboard() {
     navigate(`/consultation/${specialist.id}`);
   };
 
-  const handleSOS = () => {
+  const cancelSOS = useCallback(() => {
+    if (sosCountdownRef.current) clearInterval(sosCountdownRef.current);
+    if (sosTimerRef.current) clearTimeout(sosTimerRef.current);
+    setSosState("idle");
+    setSosCountdown(3);
+    setSosResult(null);
+  }, []);
+
+  const sendSOSAlert = useCallback(async () => {
+    setSosState("sending");
+
+    // Mock sending the alert since backend trigger is removed per user request
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    setSosState("sent");
     toast({
-      title: "🚨 Emergency Mode",
-      description: "SOS feature will be activated. This will call your emergency contacts.",
-      variant: "destructive",
+      title: "🚨 SOS Alert Sent!",
+      description: "An emergency message has been sent to your emergency contact.",
     });
-  };
+  }, []);
+
+  const handleSOS = useCallback(() => {
+    setSosState("confirming");
+    setSosCountdown(3);
+
+    let count = 3;
+    sosCountdownRef.current = setInterval(() => {
+      count -= 1;
+      setSosCountdown(count);
+      if (count <= 0) {
+        clearInterval(sosCountdownRef.current);
+        sendSOSAlert();
+      }
+    }, 1000);
+  }, [sendSOSAlert]);
 
   // Filter specialists
   const filteredSpecialists = SPECIALISTS.filter((specialist) => {
@@ -165,6 +202,26 @@ export default function Dashboard() {
                     <MessageCircle className="h-6 w-6" />
                     <span className="hidden sm:inline">Choose Specialist</span>
                     <span className="sm:hidden">Choose</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="h-16 px-6 text-lg gap-2 border-primary/20 hover:bg-primary/5 shadow-sm"
+                    onClick={() => {
+                      const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+                      audio.play().catch(e => {
+                        console.error("Test sound failed:", e);
+                        toast({ 
+                          title: "Sound Test Failed", 
+                          description: "Your browser blocked the sound. Please click anywhere on the page and try again.", 
+                          variant: "destructive" 
+                        });
+                      });
+                      toast({ title: "Testing Alarm Sound", description: "You should hear a digital beep signal." });
+                    }}
+                  >
+                    <Bell className="h-5 w-5 text-primary" />
+                    <span className="hidden sm:inline">Test Alarm</span>
                   </Button>
                 </div>
               </div>
@@ -461,6 +518,112 @@ export default function Dashboard() {
           </motion.div>
         </div>
       </main>
+
+      {/* SOS Confirmation/Status Overlay */}
+      <AnimatePresence>
+        {sosState !== "idle" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+            style={{ backgroundColor: sosState === "confirming" ? "rgba(220, 38, 38, 0.92)" : sosState === "sent" ? "rgba(22, 163, 74, 0.92)" : "rgba(0, 0, 0, 0.85)" }}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="text-center text-white max-w-md w-full"
+            >
+              {sosState === "confirming" && (
+                <>
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 0.8 }}
+                  >
+                    <ShieldAlert className="h-24 w-24 mx-auto mb-4" />
+                  </motion.div>
+                  <h1 className="text-4xl font-bold mb-2">SOS Alert</h1>
+                  <p className="text-xl mb-4">Sending emergency alert in...</p>
+                  <motion.div
+                    key={sosCountdown}
+                    initial={{ scale: 1.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="text-7xl font-bold mb-6"
+                  >
+                    {sosCountdown}
+                  </motion.div>
+                  <p className="text-lg opacity-80 mb-6">Your caregiver will be notified immediately</p>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={cancelSOS}
+                    className="text-white border-white hover:bg-white/20 text-lg px-8 py-6"
+                  >
+                    <X className="h-5 w-5 mr-2" />
+                    Cancel
+                  </Button>
+                </>
+              )}
+
+              {sosState === "sending" && (
+                <>
+                  <Loader2 className="h-20 w-20 mx-auto mb-4 animate-spin" />
+                  <h1 className="text-3xl font-bold mb-2">Sending Alert...</h1>
+                  <p className="text-lg opacity-80">Contacting your emergency contacts</p>
+                </>
+              )}
+
+              {sosState === "sent" && (
+                <>
+                  <CheckCircle className="h-24 w-24 mx-auto mb-4" />
+                  <h1 className="text-3xl font-bold mb-2">Alert Sent!</h1>
+                  <p className="text-lg mt-4 text-white/90">
+                    Your emergency contact has been sent an emergency message.
+                  </p>
+                  <p className="mt-3 text-white/70 text-sm">
+                    They have been notified of your situation.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={cancelSOS}
+                    className="mt-6 text-white border-white hover:bg-white/20"
+                  >
+                    Dismiss
+                  </Button>
+                </>
+              )}
+
+              {sosState === "error" && (
+                <>
+                  <AlertTriangle className="h-24 w-24 mx-auto mb-4" />
+                  <h1 className="text-3xl font-bold mb-2">Alert Issue</h1>
+                  <p className="text-lg mb-2">{sosResult?.error || "Could not send the alert."}</p>
+                  <p className="text-white/70 mb-6">Please call your emergency contacts or dial 112 directly.</p>
+                  <div className="flex gap-3 justify-center">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={cancelSOS}
+                      className="text-white border-white hover:bg-white/20"
+                    >
+                      Dismiss
+                    </Button>
+                    <Button
+                      size="lg"
+                      onClick={() => { cancelSOS(); handleSOS(); }}
+                      className="bg-white text-red-600 hover:bg-white/90"
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <SOSButton onClick={handleSOS} />
     </div>

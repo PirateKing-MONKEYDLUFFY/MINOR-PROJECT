@@ -23,9 +23,8 @@ serve(async (req) => {
 
 CRITICAL RESPONSE RULES - YOU MUST FOLLOW THESE:
 
-1. LENGTH: Keep responses SHORT! Maximum 2-3 sentences for simple questions. Never more than 5 sentences.
-
-2. TONE: Be warm like a caring friend. Use phrases like:
+1. LENGTH: Keep responses EXTREMELY SHORT! **MAXIMUM 2 sentences**. Never more than 3.
+2. TONE: Be warm like a caring friend. Use simple empathy (1 sentence).
    - "I understand how you feel..."
    - "That's a great question!"
    - "You're doing the right thing by asking..."
@@ -48,14 +47,14 @@ CRITICAL RESPONSE RULES - YOU MUST FOLLOW THESE:
 
 Remember: Your response will be read aloud to an elderly person. Keep it conversational and comforting.`;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: medicalSystemPrompt },
           ...messages,

@@ -43,11 +43,11 @@ serve(async (req) => {
           text,
           model_id: "eleven_multilingual_v2",
           voice_settings: {
-            stability: 0.6, // Slightly more expressive
+            stability: 0.7, // Clearer at higher speeds
             similarity_boost: 0.75,
-            style: 0.3, // Gentle style
+            style: 0.3,
             use_speaker_boost: true,
-            speed: 0.85, // Slightly slower for elderly listeners
+            speed: 1.05, // Faster as requested
           },
         }),
       }

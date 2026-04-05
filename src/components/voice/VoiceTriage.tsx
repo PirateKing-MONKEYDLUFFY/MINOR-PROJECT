@@ -33,8 +33,28 @@ export function VoiceTriage({ onClose, isFullscreen = false }: VoiceTriageProps)
   const [triageResult, setTriageResult] = useState<TriageResult | null>(null);
   const [currentTranscript, setCurrentTranscript] = useState("");
   const isProcessingRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const [navTarget, setNavTarget] = useState<{ id: string; transcript: string } | null>(null);
 
-  const { speak, isSpeaking } = useTextToSpeech({ voiceGender: "female" });
+  useEffect(() => {
+    return () => { isMountedRef.current = false; };
+  }, []);
+
+  const handleVoiceEnd = useCallback(() => {
+    if (navTarget && isMountedRef.current) {
+      navigate(`/consultation/${navTarget.id}`, {
+        state: { 
+          initialMessage: navTarget.transcript,
+          fromTriage: true 
+        }
+      });
+    }
+  }, [navTarget, navigate]);
+
+  const { speak, isSpeaking } = useTextToSpeech({ 
+    voiceGender: "female",
+    onEnd: handleVoiceEnd
+  });
 
   const handleTriageComplete = useCallback(async (transcript: string) => {
     if (!transcript.trim() || isProcessingRef.current) return;
@@ -64,19 +84,12 @@ export function VoiceTriage({ onClose, isFullscreen = false }: VoiceTriageProps)
       const result = await response.json();
       setTriageResult(result);
 
+      // Setup navigation target to fire when speech ends
+      setNavTarget({ id: result.specialist.id, transcript });
+
       // Announce the result
       const announcement = `I understand. Based on what you told me, I'm connecting you with ${result.specialist.name}, our ${result.specialist.title}. They're perfect for helping with ${result.reason.toLowerCase()}.`;
       speak(announcement);
-
-      // Auto-navigate after announcement
-      setTimeout(() => {
-        navigate(`/consultation/${result.specialist.id}`, {
-          state: { 
-            initialMessage: transcript,
-            fromTriage: true 
-          }
-        });
-      }, 4000);
 
     } catch (error: any) {
       console.error("Triage error:", error);
@@ -88,8 +101,9 @@ export function VoiceTriage({ onClose, isFullscreen = false }: VoiceTriageProps)
         variant: "destructive",
       });
       setIsAnalyzing(false);
+      isProcessingRef.current = false;
     }
-  }, [navigate, speak]);
+  }, [speak]);
 
   const { 
     isListening, 
@@ -99,7 +113,6 @@ export function VoiceTriage({ onClose, isFullscreen = false }: VoiceTriageProps)
     isSupported 
   } = useSpeechRecognition({
     continuous: true,
-    autoStopTimeout: 10000,
     onResult: handleTriageComplete,
   });
 

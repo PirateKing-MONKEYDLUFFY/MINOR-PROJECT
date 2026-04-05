@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -200,6 +201,7 @@ export default function CaregiverPortal() {
       setIsAddingElder(false);
       setNewElderName("");
       setNewElderPhone("");
+      // Force immediate refresh
       fetchElders();
     } catch (error: any) {
       console.error("Error adding elder:", error);
@@ -301,7 +303,11 @@ export default function CaregiverPortal() {
             </h1>
             <p className="text-muted-foreground">Monitor your elders' health and wellbeing</p>
           </div>
-          <Dialog>
+          <div className="flex gap-2">
+            <Button variant="outline" size="icon" onClick={fetchElders} disabled={isLoading}>
+              <Loader2 className={cn("h-4 w-4", isLoading && "animate-spin")} />
+            </Button>
+            <Dialog>
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Users className="h-4 w-4" />
@@ -348,19 +354,53 @@ export default function CaregiverPortal() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </motion.div>
+        </div>
+      </motion.div>
 
         {elders.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-              <h3 className="font-semibold text-lg mb-1">No Elders Connected</h3>
-              <p className="text-muted-foreground text-sm mb-4">
-                Complete the onboarding to add an elder's profile.
+          <Card className="border-dashed border-2 bg-muted/20">
+            <CardContent className="p-12 text-center">
+              <div className="bg-primary/10 p-4 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
+                <Users className="h-10 w-10 text-primary/40" />
+              </div>
+              <h3 className="font-bold text-2xl mb-2">No Elders Connected</h3>
+              <p className="text-muted-foreground text-lg mb-8 max-w-md mx-auto">
+                You haven't connected any elder profiles yet. You can either set up a new profile with a full health history or quickly add a name below.
               </p>
-              <Button asChild>
-                <Link to="/onboarding">Set Up Elder Profile</Link>
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button asChild size="lg" className="h-14 px-8 text-lg">
+                  <Link to="/onboarding">Full Health Setup</Link>
+                </Button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="lg" className="h-14 px-8 text-lg">
+                      Quick Add Profile
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Quick Add Elder</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="quick-name">Full Name</Label>
+                        <Input 
+                          id="quick-name" 
+                          placeholder="Enter full name" 
+                          value={newElderName}
+                          onChange={(e) => setNewElderName(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={handleAddElder} disabled={isAddingElder || !newElderName}>
+                        {isAddingElder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Add Elder
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardContent>
           </Card>
         ) : (

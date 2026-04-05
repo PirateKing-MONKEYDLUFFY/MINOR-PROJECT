@@ -7,6 +7,14 @@ import { Clock, MessageSquare, ArrowRight, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Consultation history stored in localStorage
+export interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+}
+
+// Consultation history stored in localStorage
 export interface ConsultationRecord {
   id: string;
   specialistId: string;
@@ -16,6 +24,7 @@ export interface ConsultationRecord {
   date: string;
   summary: string;
   messages: number;
+  fullMessages?: Message[];
 }
 
 // Helper to get consultation history from localStorage
@@ -28,14 +37,30 @@ export function getConsultationHistory(): ConsultationRecord[] {
   }
 }
 
+// Helper to get the latest consultation for a specific specialist
+export function getConsultationBySpecialist(specialistId: string): ConsultationRecord | undefined {
+  const history = getConsultationHistory();
+  return history.find(r => r.specialistId === specialistId);
+}
+
 // Helper to save consultation to history
 export function saveConsultation(consultation: Omit<ConsultationRecord, "id" | "date">) {
   const history = getConsultationHistory();
+  
+  // Find if there's an existing record for this specialist to replace/update
+  // For simplicity, we just add a new one at the top or update the existing one
+  const existingIndex = history.findIndex(r => r.specialistId === consultation.specialistId);
+  
   const newRecord: ConsultationRecord = {
     ...consultation,
-    id: Date.now().toString(),
+    id: existingIndex !== -1 ? history[existingIndex].id : Date.now().toString(),
     date: new Date().toISOString(),
   };
+  
+  if (existingIndex !== -1) {
+    history.splice(existingIndex, 1);
+  }
+  
   history.unshift(newRecord); // Add to beginning
   // Keep only last 20 consultations
   const trimmed = history.slice(0, 20);

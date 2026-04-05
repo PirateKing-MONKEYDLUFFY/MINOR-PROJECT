@@ -133,14 +133,14 @@ Respond with ONLY a JSON object in this exact format:
 If the description is unclear or too vague, default to "general-physician".
 If the description mentions emergency symptoms (severe chest pain, difficulty breathing, stroke symptoms), set urgency to "high".`;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "llama-3.3-70b-versatile",
         messages: [
           { role: "user", content: analysisPrompt },
         ],

@@ -34,34 +34,37 @@ interface QuickActionsProps {
 
 export function QuickActions({ onActionClick }: QuickActionsProps) {
   return (
-    <section>
-      <h2 className="text-2xl font-bold text-foreground mb-4">Quick Actions</h2>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <section className="py-2">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-foreground">Health & Family</h2>
+      </div>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto">
         {QUICK_ACTIONS.map((action) => (
           <Card
             key={action.id}
             onClick={() => onActionClick?.(action.id)}
             className={cn(
-              "cursor-pointer transition-all duration-200",
-              "hover:shadow-lg hover:scale-[1.02]",
-              "active:scale-[0.98]"
+              "cursor-pointer transition-all duration-300 overflow-hidden group",
+              "hover:shadow-2xl hover:scale-[1.03] border-2 hover:border-primary/40",
+              "active:scale-[0.98] h-full"
             )}
             role="button"
             tabIndex={0}
           >
-            <CardContent className="p-4 md:p-6 text-center">
+            <CardContent className="p-8 flex flex-col items-center text-center">
               <div
                 className={cn(
-                  "mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl",
+                  "mb-6 flex h-24 w-24 items-center justify-center rounded-3xl shadow-lg transition-transform group-hover:rotate-6",
                   action.color
                 )}
               >
-                {action.icon}
+                <div className="scale-125">{action.icon}</div>
               </div>
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className="text-2xl font-bold text-foreground mb-2">
                 {action.label}
               </h3>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-lg text-muted-foreground">
                 {action.description}
               </p>
             </CardContent>
