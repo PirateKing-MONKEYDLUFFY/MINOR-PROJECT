@@ -39,7 +39,7 @@ export default function Dashboard() {
   // Load real consultation history and managed elders
   useEffect(() => {
     setRecentConsultations(getConsultationHistory().slice(0, 3));
-    
+
     if (profile?.role === "caregiver") {
       fetchManagedElders();
     }
@@ -89,7 +89,7 @@ export default function Dashboard() {
 
     // Mock sending the alert since backend trigger is removed per user request
     await new Promise(resolve => setTimeout(resolve, 800));
-    
+
     setSosState("sent");
     toast({
       title: "🚨 SOS Alert Sent!",
@@ -114,14 +114,14 @@ export default function Dashboard() {
 
   // Filter specialists
   const filteredSpecialists = SPECIALISTS.filter((specialist) => {
-    const matchesSearch = 
+    const matchesSearch =
       searchQuery === "" ||
       specialist.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       specialist.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       specialist.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCategory = 
-      selectedCategory === null || 
+
+    const matchesCategory =
+      selectedCategory === null ||
       specialist.category === selectedCategory;
 
     return matchesSearch && matchesCategory;
@@ -211,10 +211,10 @@ export default function Dashboard() {
                       const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
                       audio.play().catch(e => {
                         console.error("Test sound failed:", e);
-                        toast({ 
-                          title: "Sound Test Failed", 
-                          description: "Your browser blocked the sound. Please click anywhere on the page and try again.", 
-                          variant: "destructive" 
+                        toast({
+                          title: "Sound Test Failed",
+                          description: "Your browser blocked the sound. Please click anywhere on the page and try again.",
+                          variant: "destructive"
                         });
                       });
                       toast({ title: "Testing Alarm Sound", description: "You should hear a digital beep signal." });
@@ -236,12 +236,12 @@ export default function Dashboard() {
           transition={{ delay: 0.1 }}
           className="mb-10"
         >
-          <QuickActions 
+          <QuickActions
             onActionClick={(id) => {
               if (id === "profile") navigate("/caregiver");
               else if (id === "contacts") navigate("/onboarding");
               else navigate(`/${id}`);
-            }} 
+            }}
           />
         </motion.div>
 
@@ -264,7 +264,7 @@ export default function Dashboard() {
                 </Link>
               </Button>
             </div>
-            
+
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {managedElders.map((elder) => (
                 <Card key={elder.id} className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/caregiver")}>
@@ -295,7 +295,7 @@ export default function Dashboard() {
           {/* Left Column - Specialists */}
           <div className="space-y-6" id="specialists-section">
             {/* Search */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
@@ -311,7 +311,7 @@ export default function Dashboard() {
             </motion.div>
 
             {/* Category Filter */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
@@ -341,7 +341,7 @@ export default function Dashboard() {
 
             {/* Specialists Section */}
             <div>
-              <motion.h2 
+              <motion.h2
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
@@ -351,11 +351,11 @@ export default function Dashboard() {
                 AI Health Specialists
                 <span className="text-sm font-normal text-muted-foreground">({filteredSpecialists.length})</span>
               </motion.h2>
-              
+
               <AnimatePresence mode="wait">
                 {selectedCategory === null ? (
                   // Show grouped by category
-                  <motion.div 
+                  <motion.div
                     key="grouped"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -363,7 +363,7 @@ export default function Dashboard() {
                     className="space-y-8"
                   >
                     {specialistsByCategory.map(({ category, specialists }, categoryIndex) => (
-                      <motion.div 
+                      <motion.div
                         key={category.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -393,7 +393,7 @@ export default function Dashboard() {
                   </motion.div>
                 ) : (
                   // Show filtered list
-                  <motion.div 
+                  <motion.div
                     key="filtered"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -424,8 +424,8 @@ export default function Dashboard() {
                   className="text-center py-12"
                 >
                   <p className="text-muted-foreground">No specialists found matching your search.</p>
-                  <Button 
-                    variant="link" 
+                  <Button
+                    variant="link"
                     onClick={() => { setSearchQuery(""); setSelectedCategory(null); }}
                   >
                     Clear filters
@@ -436,7 +436,7 @@ export default function Dashboard() {
           </div>
 
           {/* Right Column - History */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3 }}
@@ -503,9 +503,9 @@ export default function Dashboard() {
                     <p className="text-xs text-muted-foreground mt-1">
                       Just tap "Speak" and describe your symptoms. Our AI will automatically connect you to the right doctor.
                     </p>
-                    <Button 
-                      size="sm" 
-                      variant="link" 
+                    <Button
+                      size="sm"
+                      variant="link"
                       className="px-0 mt-1 text-primary"
                       onClick={() => setShowVoiceTriage(true)}
                     >

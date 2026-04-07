@@ -13,7 +13,7 @@ const features = [
   },
   {
     icon: <Brain className="h-6 w-6" />,
-    title: "25+ Specialists",
+    title: "12 Specialists",
     description: "Access cardiologists, neurologists, dermatologists, and more - all available 24/7.",
   },
   {
@@ -51,7 +51,7 @@ export default function Landing() {
 
           {/* Subheadline */}
           <p className="mb-8 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Provide 24/7 intelligent medical support using conversational AI. 
+            Provide 24/7 intelligent medical support using conversational AI.
             Speak your symptoms, get instant guidance, and stay connected with your health.
           </p>
 
