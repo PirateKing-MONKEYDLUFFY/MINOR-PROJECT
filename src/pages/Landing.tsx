@@ -96,7 +96,7 @@ export default function Landing() {
         <h2 className="mb-12 text-center text-3xl font-bold">How It Works</h2>
         <div className="grid gap-8 md:grid-cols-3 max-w-4xl mx-auto">
           {[
-            { step: "1", title: "Choose a Specialist", desc: "Select from 25+ AI doctors across all medical fields" },
+            { step: "1", title: "Choose a Specialist", desc: "Select from 12 AI doctors across all medical fields" },
             { step: "2", title: "Speak Your Concern", desc: "Use your voice to describe symptoms naturally" },
             { step: "3", title: "Get Instant Guidance", desc: "Receive clear, jargon-free medical advice" },
           ].map((item, index) => (
