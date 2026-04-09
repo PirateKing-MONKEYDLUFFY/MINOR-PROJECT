@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Pill, Bell, Check, Clock, X } from "lucide-react";
+import { Pill, Bell, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface AlarmOverlayProps {
@@ -16,7 +16,6 @@ export const AlarmOverlay = ({
   dosage,
   instructions,
   onTake,
-  onSnooze,
   onDismiss
 }: AlarmOverlayProps) => {
   return (
@@ -62,26 +61,15 @@ export const AlarmOverlay = ({
             I've Taken It
           </Button>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={onSnooze}
-              className="h-16 text-lg border-white text-white hover:bg-white/20 rounded-full"
-            >
-              <Clock className="h-5 w-5 mr-2" />
-              Snooze (5m)
-            </Button>
-            <Button
-              variant="ghost"
-              size="lg"
-              onClick={onDismiss}
-              className="h-16 text-lg text-white/70 hover:text-white hover:bg-white/10 rounded-full"
-            >
-              <X className="h-5 w-5 mr-2" />
-              Dismiss
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={onDismiss}
+            className="h-16 text-lg border-white text-white hover:bg-white/20 rounded-full w-full"
+          >
+            <X className="h-5 w-5 mr-2" />
+            Dismiss
+          </Button>
         </div>
       </div>
     </motion.div>

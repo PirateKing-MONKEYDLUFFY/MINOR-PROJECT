@@ -53,6 +53,7 @@ export default function Medicines() {
 
   const fetchData = async () => {
     if (!profile) {
+      console.log("Medicines: No profile found, skipping fetch");
       setIsLoading(false);
       return;
     }
@@ -60,39 +61,53 @@ export default function Medicines() {
     setIsLoading(true);
     try {
       let targetElderId = profile.id;
+      console.log("Medicines: Starting fetch for profile", profile.id, "role:", profile.role);
 
       // If caregiver, we need to fetch their elders if not already loaded or if selecting one
       if (profile.role === "caregiver") {
-        const { data: connections } = await supabase
+        const { data: connections, error: connErr } = await supabase
           .from("family_connections")
           .select("elder_id, profiles!family_connections_elder_id_fkey(id, full_name)")
           .eq("caregiver_id", profile.id);
 
+        if (connErr) {
+          console.error("Medicines: Error fetching connections:", connErr);
+          throw connErr;
+        }
+
         const elders = connections?.map(c => (c.profiles as any)) || [];
+        console.log("Medicines: Found managed elders:", elders.length);
         setManagedElders(elders);
 
         if (elders.length > 0) {
           if (!selectedElderId || !elders.find(e => e.id === selectedElderId)) {
             targetElderId = elders[0].id;
+            console.log("Medicines: Defaulting to first elder", targetElderId);
             setSelectedElderId(elders[0].id);
           } else {
             targetElderId = selectedElderId;
+            console.log("Medicines: Using selected elder", targetElderId);
           }
         } else {
-          // No elders connected
+          console.log("Medicines: Caregiver has no connected elders yet");
           setIsLoading(false);
           return;
         }
       }
 
-      console.log("Medicines: Fetching data for elder", targetElderId);
+      console.log("Medicines: Fetching medicines for elder_id:", targetElderId);
       const { data: meds, error: medsErr } = await supabase
         .from("medicines")
         .select("*")
         .eq("elder_id", targetElderId)
         .eq("is_active", true);
 
-      if (medsErr) throw medsErr;
+      if (medsErr) {
+        console.error("Medicines: Error fetching medicines:", medsErr);
+        throw medsErr;
+      }
+      
+      console.log("Medicines: Fetched medicines count:", meds?.length || 0);
       setMedicines((meds as Medicine[]) || []);
 
       const { data: todayLogs, error: logsErr } = await supabase
@@ -101,13 +116,18 @@ export default function Medicines() {
         .gte("scheduled_time", `${today}T00:00:00`)
         .lte("scheduled_time", `${today}T23:59:59`);
 
-      if (logsErr) throw logsErr;
+      if (logsErr) {
+        console.error("Medicines: Error fetching logs:", logsErr);
+        throw logsErr;
+      }
       
       // Filter logs for our medicines only
       const medIds = meds?.map(m => m.id) || [];
-      setLogs((todayLogs as MedicineLog[]).filter(l => medIds.includes(l.medicine_id)) || []);
+      const filteredLogs = (todayLogs as MedicineLog[]).filter(l => medIds.includes(l.medicine_id)) || [];
+      console.log("Medicines: Logs for today:", filteredLogs.length);
+      setLogs(filteredLogs);
     } catch (error: any) {
-      console.error("Medicines: Error fetching data:", error);
+      console.error("Medicines: Critical error in fetchData:", error);
       toast({
         title: "Error loading medicines",
         description: error.message || "Please check your connection.",

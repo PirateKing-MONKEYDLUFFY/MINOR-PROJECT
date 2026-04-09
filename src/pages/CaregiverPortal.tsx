@@ -38,7 +38,7 @@ interface ElderProfile {
   full_name: string;
   phone: string | null;
   medicines?: { name: string; dosage: string }[];
-  emergency_contacts?: { name: string; phone: string; relation: string }[];
+  emergency_contacts?: { name: string; phone: string; relationship: string }[];
 }
 
 interface MedicineSummary {
@@ -92,7 +92,7 @@ export default function CaregiverPortal() {
           id, 
           full_name, 
           phone,
-          medicines (
+          medicines!medicines_elder_id_fkey (
             name,
             dosage
           ),
@@ -139,8 +139,9 @@ export default function CaregiverPortal() {
 
       setElderMedicines(medsMap);
       setElderContacts(contactsMap);
-    } catch (error) {
+    } catch (error: any) {
       console.error("CaregiverPortal: Error fetching data:", error);
+      toast.error("Failed to load elders: " + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -467,7 +468,7 @@ export default function CaregiverPortal() {
                             <div key={idx} className="bg-background/50 p-2 rounded border border-warning/20 text-xs">
                               <p className="font-bold">{contact.name}</p>
                               <p className="text-muted-foreground">{contact.phone}</p>
-                              <p className="text-[10px] uppercase font-bold text-warning/70">{contact.relation}</p>
+                              <p className="text-[10px] uppercase font-bold text-warning/70">{contact.relationship}</p>
                             </div>
                           ))}
                         </div>

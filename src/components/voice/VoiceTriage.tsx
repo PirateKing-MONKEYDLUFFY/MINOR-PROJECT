@@ -34,22 +34,22 @@ export function VoiceTriage({ onClose, isFullscreen = false }: VoiceTriageProps)
   const [currentTranscript, setCurrentTranscript] = useState("");
   const isProcessingRef = useRef(false);
   const isMountedRef = useRef(true);
-  const [navTarget, setNavTarget] = useState<{ id: string; transcript: string } | null>(null);
+  const navTargetRef = useRef<{ id: string; transcript: string } | null>(null);
 
   useEffect(() => {
     return () => { isMountedRef.current = false; };
   }, []);
 
   const handleVoiceEnd = useCallback(() => {
-    if (navTarget && isMountedRef.current) {
-      navigate(`/consultation/${navTarget.id}`, {
+    if (navTargetRef.current && isMountedRef.current) {
+      navigate(`/consultation/${navTargetRef.current.id}`, {
         state: { 
-          initialMessage: navTarget.transcript,
+          initialMessage: navTargetRef.current.transcript,
           fromTriage: true 
         }
       });
     }
-  }, [navTarget, navigate]);
+  }, [navigate]);
 
   const { speak, isSpeaking } = useTextToSpeech({ 
     voiceGender: "female",
@@ -57,6 +57,9 @@ export function VoiceTriage({ onClose, isFullscreen = false }: VoiceTriageProps)
   });
 
   const handleTriageComplete = useCallback(async (transcript: string) => {
+    // If it's the pending transcription state, do nothing
+    if (transcript === "Transcribing using NLP...") return;
+
     if (!transcript.trim() || isProcessingRef.current) return;
     
     isProcessingRef.current = true;
@@ -85,11 +88,15 @@ export function VoiceTriage({ onClose, isFullscreen = false }: VoiceTriageProps)
       setTriageResult(result);
 
       // Setup navigation target to fire when speech ends
-      setNavTarget({ id: result.specialist.id, transcript });
+      const target = { id: result.specialist.id, transcript };
+      navTargetRef.current = target; // Ensure closure sees updated value
 
       // Announce the result
       const announcement = `I understand. Based on what you told me, I'm connecting you with ${result.specialist.name}, our ${result.specialist.title}. They're perfect for helping with ${result.reason.toLowerCase()}.`;
       speak(announcement);
+      
+      setIsAnalyzing(false);
+      isProcessingRef.current = false;
 
     } catch (error: any) {
       console.error("Triage error:", error);
@@ -115,6 +122,10 @@ export function VoiceTriage({ onClose, isFullscreen = false }: VoiceTriageProps)
     continuous: true,
     onResult: handleTriageComplete,
   });
+
+  // Calculate busy state for UI
+  const isTranscribing = currentTranscript === "Transcribing using NLP...";
+  const isBusy = isAnalyzing || isTranscribing;
 
   // Update live transcript
   useEffect(() => {
@@ -176,7 +187,7 @@ export function VoiceTriage({ onClose, isFullscreen = false }: VoiceTriageProps)
               <Button
                 size="lg"
                 onClick={handleVoiceToggle}
-                disabled={!isSupported || isAnalyzing}
+                disabled={!isSupported || isBusy}
                 className={cn(
                   "h-28 w-28 rounded-full shadow-lg transition-all duration-300 relative z-10",
                   isListening 
@@ -184,7 +195,7 @@ export function VoiceTriage({ onClose, isFullscreen = false }: VoiceTriageProps)
                     : "bg-primary hover:bg-primary/90"
                 )}
               >
-                {isAnalyzing ? (
+                {isBusy ? (
                   <Loader2 className="h-10 w-10 animate-spin" />
                 ) : isListening ? (
                   <MicOff className="h-10 w-10" />
@@ -196,10 +207,10 @@ export function VoiceTriage({ onClose, isFullscreen = false }: VoiceTriageProps)
 
             {/* Status Text */}
             <p className="text-lg text-muted-foreground mt-4 text-center">
-              {isAnalyzing ? (
+              {isBusy ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Analyzing your symptoms...
+                  {isAnalyzing ? "Analyzing your symptoms..." : "Transcribing your voice..."}
                 </span>
               ) : isListening ? (
                 "I'm listening... describe how you feel"

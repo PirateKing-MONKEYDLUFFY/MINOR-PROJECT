@@ -29,39 +29,72 @@ export const MedicineReminder = () => {
   // Format: { "id-time": "dismissed" | "snoozed-until-timestamp" }
   const [dosesState, setDosesState] = useState<Record<string, string>>(() => {
     const saved = localStorage.getItem("medicine_doses_state");
+    const today = format(new Date(), "yyyy-MM-dd");
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Clear old dates if stored (we only care about today)
-      const today = format(new Date(), "yyyy-MM-dd");
       if (parsed?._date !== today) return { _date: today };
       return parsed;
     }
-    return { _date: format(new Date(), "yyyy-MM-dd") };
+    return { _date: today };
   });
+
+  const [dbLogs, setDbLogs] = useState<any[]>([]);
 
   useEffect(() => {
     localStorage.setItem("medicine_doses_state", JSON.stringify(dosesState));
   }, [dosesState]);
 
-  // Fetch medicines
+  // Fetch medicines and their logs for today
   const fetchMedicines = useCallback(async () => {
     if (!profile) return;
     try {
-      const { data, error } = await supabase
+      console.log("[MedicineAlarm] Syncing with database...");
+      let targetIds = [profile.id];
+
+      if (profile.role === "caregiver") {
+        const { data: connections } = await supabase
+          .from("family_connections")
+          .select("elder_id")
+          .eq("caregiver_id", profile.id);
+        
+        if (connections && connections.length > 0) {
+          const elderIds = connections.map(c => c.elder_id);
+          targetIds = [...targetIds, ...elderIds];
+        }
+      }
+
+      // Fetch medicines
+      const { data: meds, error: medsErr } = await supabase
         .from("medicines")
         .select("id, name, dosage, times, instructions")
-        .eq("elder_id", profile.id)
+        .in("elder_id", targetIds)
         .eq("is_active", true);
 
-      if (error) throw error;
-      setMedicines(data || []);
+      if (medsErr) throw medsErr;
+      setMedicines(meds || []);
+
+      // Fetch today's logs to synchronize state
+      const todayString = format(new Date(), "yyyy-MM-dd");
+      const { data: logs, error: logsErr } = await supabase
+        .from("medicine_logs")
+        .select("medicine_id, scheduled_time, status")
+        .gte("scheduled_time", `${todayString}T00:00:00`)
+        .lte("scheduled_time", `${todayString}T23:59:59`);
+      
+      if (logsErr) throw logsErr;
+      setDbLogs(logs || []);
+      
+      console.log(`[MedicineAlarm] Sync complete. ${meds?.length || 0} medicines, ${logs?.length || 0} logs found.`);
     } catch (err) {
-      console.error("MedicineReminder: Error fetching medicines:", err);
+      console.error("MedicineReminder: Error during sync:", err);
     }
   }, [profile]);
 
   useEffect(() => {
     fetchMedicines();
+    // Poll every 60 seconds
+    const pollInterval = setInterval(fetchMedicines, 60000);
+    return () => clearInterval(pollInterval);
   }, [fetchMedicines]);
 
   const stopAlarm = useCallback(() => {
@@ -74,14 +107,14 @@ export const MedicineReminder = () => {
   }, [stopTTS]);
 
   const playAlarm = useCallback((med: Medicine) => {
+    console.log(`[MedicineAlarm] Triggering alarm for: ${med.name}`);
     if (!audioRef.current) {
       audioRef.current = new Audio(ALARM_URL);
       audioRef.current.loop = true;
     }
     
     audioRef.current.play().catch(e => {
-      console.warn("Alarm audio failed, falling back to TTS:", e);
-      // Fallback: Use TTS to announce the medicine
+      console.warn("Alarm audio blocked or failed, using TTS fallback:", e);
       speak(`Attention. It is time to take your medication: ${med.name}. ${med.dosage}.`);
       
       toast({
@@ -107,6 +140,7 @@ export const MedicineReminder = () => {
       setDosesState(prev => ({ ...prev, [key]: "dismissed" }));
       stopAlarm();
       toast({ title: "Medicine Logged", description: "Stay healthy!" });
+      fetchMedicines(); // Refresh logs
     } catch (err) {
       console.error("Error logging medicine:", err);
     }
@@ -132,7 +166,7 @@ export const MedicineReminder = () => {
   };
 
   const checkReminders = useCallback(() => {
-    if (activeAlarm) return; // Don't trigger another while one is active
+    if (activeAlarm) return;
 
     const now = new Date();
     const currentTime = format(now, "HH:mm");
@@ -140,19 +174,31 @@ export const MedicineReminder = () => {
     medicines.forEach(med => {
       med.times.forEach(scheduledTime => {
         const key = `${med.id}-${scheduledTime}`;
-        const state = dosesState[key];
+        const localState = dosesState[key];
+        
+        // Check if already taken in DB
+        const isTakenInDb = dbLogs.some(log => 
+          log.medicine_id === med.id && 
+          log.status === "taken" &&
+          format(new Date(log.scheduled_time), "HH:mm") === scheduledTime
+        );
 
-        // 1. Check if the time matches (standard minute check)
+        if (isTakenInDb) {
+          // Already taken, don't ring
+          return;
+        }
+
+        // 1. Standard minute check
         if (currentTime === scheduledTime) {
-          if (!state || state === "pending") {
+          if (!localState || localState === "pending") {
             setActiveAlarm(med);
             playAlarm(med);
           }
         }
 
-        // 2. Check for snoozed alarms
-        if (state?.startsWith("snoozed-")) {
-          const snoozeUntil = new Date(state.split("snoozed-")[1]);
+        // 2. Snooze check
+        if (localState?.startsWith("snoozed-")) {
+          const snoozeUntil = new Date(localState.split("snoozed-")[1]);
           if (isAfter(now, snoozeUntil)) {
             setActiveAlarm(med);
             playAlarm(med);
@@ -160,11 +206,11 @@ export const MedicineReminder = () => {
         }
       });
     });
-  }, [activeAlarm, medicines, dosesState, playAlarm]);
+  }, [activeAlarm, medicines, dosesState, dbLogs, playAlarm]);
 
   useEffect(() => {
-    // Check every 30 seconds to be precise
-    checkIntervalRef.current = setInterval(checkReminders, 30000);
+    // Check for ring trigger every 15 seconds for responsiveness
+    checkIntervalRef.current = setInterval(checkReminders, 15000);
     return () => clearInterval(checkIntervalRef.current);
   }, [checkReminders]);
 
@@ -176,7 +222,6 @@ export const MedicineReminder = () => {
       dosage={activeAlarm.dosage}
       instructions={activeAlarm.instructions || ""}
       onTake={handleTake}
-      onSnooze={handleSnooze}
       onDismiss={handleDismiss}
     />
   );

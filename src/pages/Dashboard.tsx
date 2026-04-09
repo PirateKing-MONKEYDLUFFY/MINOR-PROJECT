@@ -203,26 +203,6 @@ export default function Dashboard() {
                     <span className="hidden sm:inline">Choose Specialist</span>
                     <span className="sm:hidden">Choose</span>
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="h-16 px-6 text-lg gap-2 border-primary/20 hover:bg-primary/5 shadow-sm"
-                    onClick={() => {
-                      const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
-                      audio.play().catch(e => {
-                        console.error("Test sound failed:", e);
-                        toast({
-                          title: "Sound Test Failed",
-                          description: "Your browser blocked the sound. Please click anywhere on the page and try again.",
-                          variant: "destructive"
-                        });
-                      });
-                      toast({ title: "Testing Alarm Sound", description: "You should hear a digital beep signal." });
-                    }}
-                  >
-                    <Bell className="h-5 w-5 text-primary" />
-                    <span className="hidden sm:inline">Test Alarm</span>
-                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -558,7 +538,7 @@ export default function Dashboard() {
                     variant="outline"
                     size="lg"
                     onClick={cancelSOS}
-                    className="text-white border-white hover:bg-white/20 text-lg px-8 py-6"
+                    className="text-white border-white bg-transparent hover:bg-white/20 text-lg px-8 py-6"
                   >
                     <X className="h-5 w-5 mr-2" />
                     Cancel
@@ -588,7 +568,7 @@ export default function Dashboard() {
                     variant="outline"
                     size="lg"
                     onClick={cancelSOS}
-                    className="mt-6 text-white border-white hover:bg-white/20"
+                    className="mt-6 text-white border-white bg-transparent hover:bg-white/20"
                   >
                     Dismiss
                   </Button>
