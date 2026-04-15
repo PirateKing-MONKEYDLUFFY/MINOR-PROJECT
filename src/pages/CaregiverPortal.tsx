@@ -94,7 +94,8 @@ export default function CaregiverPortal() {
           phone,
           medicines!medicines_elder_id_fkey (
             name,
-            dosage
+            dosage,
+            is_active
           ),
           emergency_contacts (
             name,
@@ -104,9 +105,15 @@ export default function CaregiverPortal() {
         `)
         .in("id", elderIds);
 
+      // Filter out inactive medicines from each elder profile
+      const activeProfiles = (elderProfiles as any[])?.map((elder: any) => ({
+        ...elder,
+        medicines: (elder.medicines || []).filter((m: any) => m.is_active !== false),
+      })) || [];
+
       if (profileErr) throw profileErr;
 
-      const typedProfiles = (elderProfiles as any[]) || [];
+      const typedProfiles = activeProfiles;
       setElders(typedProfiles);
 
       const medsMap: Record<string, MedicineSummary> = {};

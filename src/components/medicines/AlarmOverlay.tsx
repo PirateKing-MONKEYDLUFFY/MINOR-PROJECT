@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
-import { Pill, Bell, Check, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Pill, Bell, Check, X, Clock } from "lucide-react";
 
 interface AlarmOverlayProps {
   medicineName: string;
@@ -16,7 +15,8 @@ export const AlarmOverlay = ({
   dosage,
   instructions,
   onTake,
-  onDismiss
+  onSnooze,
+  onDismiss,
 }: AlarmOverlayProps) => {
   return (
     <motion.div
@@ -41,35 +41,86 @@ export const AlarmOverlay = ({
           Please take your {medicineName}
         </p>
 
-        <div className="bg-white/10 rounded-2xl p-6 mb-10 border border-white/20">
+        <div className="bg-white/10 rounded-2xl p-6 mb-8 border border-white/20">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Bell className="h-5 w-5" />
             <span className="text-lg font-medium">{dosage}</span>
           </div>
           {instructions && (
-            <p className="text-white/80">{instructions}</p>
+            <p className="text-white/80 text-sm">{instructions}</p>
           )}
         </div>
 
-        <div className="grid gap-4">
-          <Button
-            size="lg"
+        <div className="flex flex-col gap-3">
+          {/* Primary: Take */}
+          <button
             onClick={onTake}
-            className="h-20 text-2xl bg-white text-primary hover:bg-white/90 shadow-xl rounded-full"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "12px",
+              height: "80px",
+              fontSize: "22px",
+              fontWeight: "bold",
+              background: "#ffffff",
+              color: "#0f6b3a",
+              border: "none",
+              borderRadius: "9999px",
+              cursor: "pointer",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+              width: "100%",
+            }}
           >
-            <Check className="h-8 w-8 mr-3" />
-            I've Taken It
-          </Button>
+            <Check style={{ width: "28px", height: "28px", color: "#0f6b3a", flexShrink: 0 }} />
+            <span style={{ color: "#0f6b3a" }}>I&apos;ve Taken It</span>
+          </button>
 
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={onDismiss}
-            className="h-16 text-lg border-white text-white hover:bg-white/20 rounded-full w-full"
+          {/* Snooze */}
+          <button
+            onClick={onSnooze}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              height: "60px",
+              fontSize: "18px",
+              fontWeight: "600",
+              background: "rgba(255,255,255,0.15)",
+              color: "#ffffff",
+              border: "2px solid rgba(255,255,255,0.6)",
+              borderRadius: "9999px",
+              cursor: "pointer",
+              width: "100%",
+            }}
           >
-            <X className="h-5 w-5 mr-2" />
+            <Clock style={{ width: "20px", height: "20px" }} />
+            Snooze 5 min
+          </button>
+
+          {/* Dismiss */}
+          <button
+            onClick={onDismiss}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              height: "48px",
+              fontSize: "15px",
+              fontWeight: "500",
+              background: "transparent",
+              color: "rgba(255,255,255,0.6)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              borderRadius: "9999px",
+              cursor: "pointer",
+              width: "100%",
+            }}
+          >
+            <X style={{ width: "18px", height: "18px" }} />
             Dismiss
-          </Button>
+          </button>
         </div>
       </div>
     </motion.div>

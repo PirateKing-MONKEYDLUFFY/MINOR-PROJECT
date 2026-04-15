@@ -25,6 +25,9 @@ export default function Dashboard() {
   const [showVoiceTriage, setShowVoiceTriage] = useState(false);
   const [managedElders, setManagedElders] = useState<any[]>([]);
   const [isEldersLoading, setIsEldersLoading] = useState(false);
+  const [emergencyContacts, setEmergencyContacts] = useState<any[]>([]);
+  const [isContactsLoading, setIsContactsLoading] = useState(false);
+  const [showContactsModal, setShowContactsModal] = useState(false);
   const { profile } = useAuth();
 
   // SOS state
@@ -70,6 +73,49 @@ export default function Dashboard() {
     } finally {
       setIsEldersLoading(false);
     }
+  };
+
+  const fetchEmergencyContacts = async () => {
+    if (!profile) return;
+    setIsContactsLoading(true);
+    try {
+      let query = supabase.from("emergency_contacts").select("*");
+      
+      if (profile.role === "elder") {
+        query = query.eq("elder_id", profile.id);
+      } else if (profile.role === "caregiver") {
+        // For caregivers, we fetch contacts for all elders they manage
+        const { data: connections } = await supabase
+          .from("family_connections")
+          .select("elder_id")
+          .eq("caregiver_id", profile.id);
+          
+        if (connections && connections.length > 0) {
+          query = query.in("elder_id", connections.map(c => c.elder_id));
+        } else {
+          setEmergencyContacts([]);
+          return;
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      setEmergencyContacts(data || []);
+    } catch (err) {
+      console.error("Error fetching emergency contacts:", err);
+      toast({
+        title: "Error",
+        description: "Could not load emergency contacts.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsContactsLoading(false);
+    }
+  };
+
+  const handleCallFamily = async () => {
+    setShowContactsModal(true);
+    await fetchEmergencyContacts();
   };
 
   const handleSpecialistClick = (specialist: Specialist) => {
@@ -219,7 +265,7 @@ export default function Dashboard() {
           <QuickActions
             onActionClick={(id) => {
               if (id === "profile") navigate("/caregiver");
-              else if (id === "contacts") navigate("/onboarding");
+              else if (id === "contacts") handleCallFamily();
               else navigate(`/${id}`);
             }}
           />
@@ -599,6 +645,130 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Emergency Contacts Modal */}
+      <AnimatePresence>
+        {showContactsModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setShowContactsModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-card border-2 border-primary/20 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 border-b flex items-center justify-between bg-primary/5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <Phone className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Call Family</h2>
+                    <p className="text-sm text-muted-foreground">Quick dial emergency contacts</p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setShowContactsModal(false)} className="rounded-full">
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+
+              <div className="p-6 max-h-[60vh] overflow-y-auto">
+                {isContactsLoading ? (
+                  <div className="flex flex-col items-center justify-center py-12 gap-4">
+                    <Loader2 className="h-10 w-10 text-primary animate-spin" />
+                    <p className="text-muted-foreground animate-pulse">Loading contacts...</p>
+                  </div>
+                ) : emergencyContacts.length > 0 ? (
+                  <div className="grid gap-4">
+                    {emergencyContacts.map((contact) => (
+                      <motion.div
+                        key={contact.id}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border-2 border-transparent hover:border-primary/20 transition-all group"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-xl">
+                            {contact.relationship?.toLowerCase().includes('son') ? '👦' : 
+                             contact.relationship?.toLowerCase().includes('daughter') ? '👧' : 
+                             contact.relationship?.toLowerCase().includes('wife') ? '👵' : 
+                             contact.relationship?.toLowerCase().includes('husband') ? '👴' : '👤'}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-lg">{contact.name}</p>
+                              {contact.is_primary && (
+                                <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Primary</span>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{contact.relationship} • {contact.phone}</p>
+                          </div>
+                        </div>
+                        <Button 
+                          size="lg" 
+                          className="rounded-full h-12 w-12 p-0 shadow-lg group-hover:bg-primary group-hover:scale-110 transition-all"
+                          asChild
+                        >
+                          <a href={`tel:${contact.phone}`}>
+                            <Phone className="h-6 w-6 fill-current" />
+                          </a>
+                        </Button>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-10 px-4">
+                    <motion.div
+                      animate={{ scale: [1, 1.05, 1] }}
+                      transition={{ repeat: Infinity, duration: 2 }}
+                      className="h-20 w-20 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-4"
+                    >
+                      <Phone className="h-10 w-10 text-warning opacity-70" />
+                    </motion.div>
+                    <h3 className="text-lg font-bold mb-2">No Emergency Contacts Set Up</h3>
+                    <p className="text-muted-foreground mb-2 text-sm">
+                      {profile?.role === "caregiver"
+                        ? "None of your elders have emergency contacts added yet."
+                        : "You haven't added any emergency contacts yet."}
+                    </p>
+                    <p className="text-muted-foreground mb-6 text-sm">
+                      Add family members as emergency contacts so you can quickly call them in an emergency.
+                    </p>
+                    <Button
+                      onClick={() => { setShowContactsModal(false); navigate("/onboarding"); }}
+                      className="w-full h-12 text-base rounded-xl mb-3"
+                    >
+                      <Phone className="h-4 w-4 mr-2" />
+                      Add Emergency Contact
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setShowContactsModal(false)}
+                      className="w-full h-10 text-sm rounded-xl text-muted-foreground"
+                    >
+                      Close
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {emergencyContacts.length > 0 && (
+                <div className="p-6 bg-muted/30 border-t">
+                  <Button variant="outline" onClick={() => { setShowContactsModal(false); navigate("/onboarding"); }} className="w-full h-12 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary transition-all">
+                    Add / Edit Contacts
+                  </Button>
+                </div>
               )}
             </motion.div>
           </motion.div>
