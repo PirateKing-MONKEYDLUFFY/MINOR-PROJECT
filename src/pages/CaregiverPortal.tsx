@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Pill, Phone, Trash2, AlertTriangle, Users, Loader2 } from "lucide-react";
+import { Pill, Phone, Trash2, AlertTriangle, Users, Loader2, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Header } from "@/components/layout/Header";
@@ -127,6 +127,7 @@ export default function CaregiverPortal() {
         const { data: todayLogs } = await supabase
           .from("medicine_logs")
           .select("id, status")
+          .eq("elder_id", elderId)
           .gte("scheduled_time", `${today}T00:00:00`)
           .lte("scheduled_time", `${today}T23:59:59`);
 
@@ -312,8 +313,14 @@ export default function CaregiverPortal() {
             <p className="text-muted-foreground">Monitor your elders' health and wellbeing</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="icon" onClick={fetchElders} disabled={isLoading}>
-              <Loader2 className={cn("h-4 w-4", isLoading && "animate-spin")} />
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={fetchElders} 
+              disabled={isLoading}
+              title="Refresh data"
+            >
+              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin text-primary")} />
             </Button>
             <Dialog>
             <DialogTrigger asChild>
